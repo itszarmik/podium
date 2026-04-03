@@ -1,0 +1,53 @@
+app = "podium-api"
+primary_region = "lhr"   # London — closest to EU users; change to "iad" for US-primary
+
+[build]
+  dockerfile = "apps/api/Dockerfile"
+
+[env]
+  NODE_ENV   = "production"
+  PORT       = "3001"
+  HOST       = "0.0.0.0"
+
+# WebSocket connections need sticky sessions per region
+[http_service]
+  internal_port        = 3001
+  force_https          = true
+  auto_stop_machines   = false   # keep warm for <300ms WS latency
+  auto_start_machines  = true
+  min_machines_running = 2       # at least 2 for zero-downtime deploys
+
+  [http_service.concurrency]
+    type       = "connections"
+    hard_limit = 50000    # 50k concurrent WS connections per machine
+    soft_limit = 40000
+
+[[services.ports]]
+  port     = 443
+  handlers = ["tls", "http"]
+
+[[services.ports]]
+  port     = 80
+  handlers = ["http"]
+
+# Auto-scale based on connection count
+[[services.autoscaling]]
+  min_count = 2
+  max_count = 20
+  metric    = "connections"
+  target    = 35000   # scale up when a machine hits 35k connections
+
+# Health check hits /health endpoint
+[[services.http_checks]]
+  interval      = "15s"
+  timeout       = "5s"
+  grace_period  = "30s"
+  method        = "GET"
+  path          = "/health"
+
+[mounts]
+  # No persistent disk needed — all state is in Postgres + Redis
+
+[[vm]]
+  size   = "performance-2x"   # 2 shared CPUs, 4GB RAM per machine
+  memory = "4gb"
