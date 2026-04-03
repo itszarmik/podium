@@ -1,0 +1,108 @@
+version: '3.9'
+
+services:
+  # ─── Databases ──────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: podium-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       podium
+      POSTGRES_USER:     podium
+      POSTGRES_PASSWORD: podium_dev_password
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U podium']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: podium-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ─── API ────────────────────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: podium-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV:              development
+      PORT:                  3001
+      HOST:                  0.0.0.0
+      DATABASE_URL:          postgresql://podium:podium_dev_password@postgres:5432/podium
+      REDIS_URL:             redis://redis:6379
+      JWT_SECRET:            dev-jwt-secret-change-in-production-abc123xyz
+      JWT_REFRESH_SECRET:    dev-refresh-secret-different-from-above-def456uvw
+      ALLOWED_ORIGINS:       http://localhost:3000,http://localhost:19006,exp://localhost:8081
+      RATE_LIMIT_MAX:        200
+      RATE_LIMIT_WINDOW:     60000
+    ports:
+      - '3001:3001'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./apps/api/src:/app/apps/api/src        # hot reload in dev
+      - ./packages/shared/src:/app/packages/shared/src
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -f http://localhost:3001/health || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Web ────────────────────────────────────────────────────────────────────
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    container_name: podium-web
+    restart: unless-stopped
+    environment:
+      NODE_ENV:                  development
+      NEXT_PUBLIC_API_URL:       http://localhost:3001/api/v1
+      NEXT_PUBLIC_WS_URL:        ws://localhost:3001/api/v1/ws
+    ports:
+      - '3000:3000'
+    depends_on:
+      api:
+        condition: service_healthy
+
+  # ─── Migrate + seed (runs once on startup) ──────────────────────────────────
+  migrate:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: podium-migrate
+    command: npm run db:migrate
+    environment:
+      DATABASE_URL: postgresql://podium:podium_dev_password@postgres:5432/podium
+      REDIS_URL:    redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: on-failure
+
+volumes:
+  postgres_data:
+  redis_data:
