@@ -1,0 +1,6 @@
+{
+  "buildCommand": "npm install --prefix ../.. && npm run build --workspace=packages/shared && npm run build",
+  "installCommand": "npm install",
+  "framework": "nextjs",
+  "outputDirectory": ".next"
+}
