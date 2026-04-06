@@ -23,11 +23,10 @@ class WebSocketManager {
     this.ws.onopen = () => {
       console.log('[WS] Connected')
       this.reconnectDelay = 1000
-      // Re-subscribe to all boards after reconnect
       for (const boardId of this.subscribedBoards) {
         this.send({ type: 'subscribe', boardId, timestamp: new Date().toISOString() })
       }
-      this.notify({ type: 'connected', timestamp: new Date().toISOString() } as WSMessage)
+      this.notify({ type: 'connected', timestamp: new Date().toISOString() } as unknown as WSMessage)
     }
 
     this.ws.onmessage = (event) => {
@@ -94,10 +93,7 @@ class WebSocketManager {
   }
 }
 
-// Singleton — one WS connection for the whole app
 export const wsManager = new WebSocketManager()
-
-// ─── React hooks ──────────────────────────────────────────────────────────────
 
 export function useWebSocket() {
   const [connected, setConnected] = useState(false)
