@@ -4,10 +4,10 @@ WORKDIR /app
 
 # ─── Dependencies ─────────────────────────────────────────────────────────────
 FROM base AS deps
-COPY package.json package-lock.json* ./
+COPY package.json ./
 COPY apps/api/package.json ./apps/api/
 COPY packages/shared/package.json ./packages/shared/
-RUN npm ci --workspace=apps/api --workspace=packages/shared --include-workspace-root
+RUN npm install --workspace=apps/api --workspace=packages/shared --include-workspace-root
 
 # ─── Builder ──────────────────────────────────────────────────────────────────
 FROM deps AS builder
@@ -20,11 +20,10 @@ RUN npm run build   --workspace=apps/api
 FROM base AS runner
 ENV NODE_ENV=production
 
-# Only production deps
-COPY package.json package-lock.json* ./
+COPY package.json ./
 COPY apps/api/package.json ./apps/api/
 COPY packages/shared/package.json ./packages/shared/
-RUN npm ci --workspace=apps/api --workspace=packages/shared --include-workspace-root --omit=dev
+RUN npm install --workspace=apps/api --workspace=packages/shared --include-workspace-root --omit=dev
 
 # Copy compiled output
 COPY --from=builder /app/apps/api/dist    ./apps/api/dist
