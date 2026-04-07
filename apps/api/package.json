@@ -5,7 +5,7 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc --noEmitOnError false || true",
+    "build": "npx esbuild $(find src -name \"*.ts\" | tr \"\n\" \" \") --outdir=dist --platform=node --target=node20 --format=cjs",
     "start": "node dist/server.js",
     "migrate": "tsx src/db/migrate.ts",
     "seed": "tsx src/db/seed.ts",
@@ -36,5 +36,6 @@
     "typescript": "^5.3.3",
     "tsx": "^4.7.1",
     "vitest": "^1.5.0"
-  }
+  },
+  "type": "commonjs"
 }
