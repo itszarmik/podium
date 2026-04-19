@@ -5,8 +5,7 @@ import {
   CreateBoardRequest, SubmitScoreRequest, FeedEvent, User,
 } from '@podium/shared'
 
-// In development, use your machine's local IP (not localhost — doesn't work on device/emulator)
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api/v1'
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://podium-api-production.up.railway.app/api/v1'
 
 const TOKEN_KEY   = 'podium_token'
 const REFRESH_KEY = 'podium_refresh'
@@ -61,7 +60,6 @@ class MobileApiClient {
     if (this.refreshPromise) return this.refreshPromise
     const refresh = await SecureStore.getItemAsync(REFRESH_KEY)
     if (!refresh) throw new Error('No refresh token')
-
     this.refreshPromise = axios
       .post<AuthResponse>(`${BASE_URL}/auth/refresh`, { refreshToken: refresh })
       .then(async (res) => {
@@ -69,11 +67,9 @@ class MobileApiClient {
         return res.data.token
       })
       .finally(() => { this.refreshPromise = null })
-
     return this.refreshPromise
   }
 
-  // ─── Auth ──────────────────────────────────────────────────────────────────
   async register(data: RegisterRequest): Promise<AuthResponse> {
     const res = await this.client.post<AuthResponse>('/auth/register', data)
     await this.setAuth(res.data.token, res.data.refreshToken)
@@ -93,7 +89,6 @@ class MobileApiClient {
 
   logout() { return this.clearAuth() }
 
-  // ─── Boards ────────────────────────────────────────────────────────────────
   async createBoard(data: CreateBoardRequest) {
     const res = await this.client.post<Board & { inviteCode?: string }>('/boards', data)
     return res.data
@@ -126,7 +121,6 @@ class MobileApiClient {
     return res.data
   }
 
-  // ─── Scores ────────────────────────────────────────────────────────────────
   async submitScore(data: SubmitScoreRequest) {
     const res = await this.client.post('/scores', data)
     return res.data as { success: boolean; score: number; newRank: number; previousRank?: number; rankDelta: number }
@@ -137,7 +131,6 @@ class MobileApiClient {
     return res.data as Array<{ rank: number; score: number; recorded_at: string }>
   }
 
-  // ─── Feed ──────────────────────────────────────────────────────────────────
   async getFeed(params?: { limit?: number }) {
     const res = await this.client.get<FeedEvent[]>('/feed', { params })
     return res.data
