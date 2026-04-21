@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import { runMigrations } from './db/migrate'
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import jwt from '@fastify/jwt'
@@ -23,8 +24,6 @@ const app = Fastify({
   },
 })
 
-// ─── Plugins ──────────────────────────────────────────────────────────────────
-
 await app.register(cors, {
   origin: (process.env.ALLOWED_ORIGINS || 'http://localhost:3000').split(','),
   credentials: true,
@@ -36,7 +35,7 @@ await app.register(jwt, {
 
 await app.register(websocket, {
   options: {
-    maxPayload: 1048576, // 1MB
+    maxPayload: 1048576,
   },
 })
 
@@ -45,7 +44,6 @@ await app.register(rateLimit, {
   timeWindow: parseInt(process.env.RATE_LIMIT_WINDOW || '60000'),
 })
 
-// ─── Auth decorator ───────────────────────────────────────────────────────────
 app.decorate('authenticate', async (req: import('fastify').FastifyRequest, reply: import('fastify').FastifyReply) => {
   try {
     await req.jwtVerify()
@@ -54,7 +52,6 @@ app.decorate('authenticate', async (req: import('fastify').FastifyRequest, reply
   }
 })
 
-// ─── Routes ───────────────────────────────────────────────────────────────────
 await app.register(authRoutes, { prefix: '/api/v1' })
 await app.register(boardRoutes, { prefix: '/api/v1' })
 await app.register(scoreRoutes, { prefix: '/api/v1' })
@@ -63,12 +60,11 @@ await app.register(feedRoutes, { prefix: '/api/v1' })
 await app.register(webhookRoutes, { prefix: '/api/v1' })
 await app.register(cardRoutes, { prefix: '/api/v1' })
 
-// Health check
 app.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }))
 
-// ─── Startup ──────────────────────────────────────────────────────────────────
 async function start() {
   try {
+    await runMigrations()
     await redis.connect()
     await redisSub.connect()
     await realtimeManager.initialize()
@@ -87,7 +83,6 @@ async function start() {
 
 start()
 
-// ─── TypeScript augmentation ──────────────────────────────────────────────────
 declare module 'fastify' {
   interface FastifyInstance {
     authenticate: (req: FastifyRequest, reply: FastifyReply) => Promise<void>
