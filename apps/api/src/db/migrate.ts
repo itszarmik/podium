@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS boards (
   type               VARCHAR(16) NOT NULL DEFAULT 'private' CHECK (type IN ('public','private')),
   category           VARCHAR(32) NOT NULL DEFAULT 'custom' CHECK (category IN ('sales','gaming','fitness','music','sports','custom')),
   scoring_type       VARCHAR(32) NOT NULL DEFAULT 'highest' CHECK (scoring_type IN ('highest','lowest','cumulative','streak','head_to_head')),
-  time_period        VARCHAR(16) HECK  time_period IN ('daily','weekly','monthly','all_time')),
+  time_period        VARCHAR(16) CHECK (time_period IN ('daily','weekly','monthly','all_time')),
   is_live            BOOLEAN NOT NULL DEFAULT TRUE,
   member_count       INT NOT NULL DEFAULT 0,
   invite_code        VARCHAR(16) UNIQUE,
@@ -82,7 +82,7 @@ CREATE TABLE IF NOT EXISTS feed_events (
   actor_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   target_id   UUID REFERENCES users(id) ON DELETE SET NULL,
   payload     JSONB NOT NULL DEFAULT '{}',
-  occurred_at TIMESTAMPT@ NOT NULL DEFAULT NOW()
+  occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_feed_actor ON feed_events(actor_id, occurred_at DESC);
 CREATE INDEX IF NOT EXISTS idx_feed_board ON feed_events(board_id, occurred_at DESC);
@@ -96,7 +96,7 @@ CREATE TABLE IF NOT EXISTS notifications (
   body       TEXT NOT NULL,
   payload    JSONB,
   read_at    TIMESTAMPTZ,
-  created_at TIMESTAMPT@ NOT NULL DEFAULT NOW()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, created_at DESC);
 
@@ -117,7 +117,7 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
   user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   token_hash VARCHAR(255) NOT NULL,
   expires_at TIMESTAMPTZ NOT NULL,
-  created_at TIMESTAMPT@ NOT NULL DEFAULT NOW()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user ON refresh_tokens(user_id);
 `
