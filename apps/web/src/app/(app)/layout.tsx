@@ -5,7 +5,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen overflow-hidden bg-podium-black">
       <Sidebar />
       <main className="flex-1 overflow-y-auto">
-        <div className="p-6">
+        {/* Extra bottom padding on mobile so content clears the bottom nav */}
+        <div className="p-4 md:p-6 pb-24 md:pb-6">
           {children}
         </div>
       </main>
